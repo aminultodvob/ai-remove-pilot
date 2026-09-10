@@ -230,30 +230,74 @@ on every path, filename sanitisation, rate limiting, and the API's success and f
 
 ## Deployment
 
-The app is a standard Next.js application and deploys anywhere Next.js runs.
-
-**It needs a Node.js runtime**, not an edge runtime: `sharp` is a native module. The processing
-route sets `runtime = "nodejs"` explicitly.
+The app is a standard Next.js application. It needs a **Node.js runtime**, not an edge runtime,
+because `sharp` is a native module — the processing route sets `runtime = "nodejs"` explicitly.
 
 Because nothing is written to disk, the usual serverless caveat about ephemeral filesystems does not
-apply — there is no state to lose between invocations. What does need attention when scaling
-horizontally:
+apply. There is no state to lose between invocations.
 
-- **Memory.** Each in-flight image occupies memory roughly proportional to its decoded size, which
-  is much larger than its file size. Size instances against `MAX_UPLOAD_SIZE_MB` and
-  `MAX_IMAGE_MEGAPIXELS` together, and lower them on small instances.
-- **Rate limiting is per instance.** The limiter holds counters in process memory, so N instances
-  permit N times the configured limit in aggregate. For a real fleet, enforce the limit at the edge
-  (your CDN or load balancer) and keep this one as a backstop.
-- **Request duration.** Large images on a slow instance can approach a platform's function timeout.
-  Keep `PROCESSING_TIMEOUT_MS` comfortably below it so users get a clear message rather than a
-  gateway error.
-- **Body size limits.** Some platforms cap request bodies below 25 MB. Set
-  `MAX_UPLOAD_SIZE_MB` to match, or uploads will fail at the platform layer before the app can
-  produce a useful error.
+### Vercel
 
-A long-running Node process (a container, a VM) is the simplest fit: it avoids cold-start cost on a
-native module and makes the in-memory rate limiter behave as intended.
+Deploys with no configuration: push the repo and import it, or run `vercel`.
+
+**One limit decides everything else.** Vercel caps both the request body and the response body of a
+function at **4.5 MB** (`FUNCTION_PAYLOAD_TOO_LARGE`). This app sends an image up and gets an image
+back, so both halves of the round trip are subject to it. Set the upload limit accordingly:
+
+| Variable                         | Value on Vercel               |
+| -------------------------------- | ----------------------------- |
+| `NEXT_PUBLIC_APP_URL`            | `https://your-domain.example` |
+| `NEXT_PUBLIC_MAX_UPLOAD_SIZE_MB` | `3`                           |
+| `MAX_UPLOAD_SIZE_MB`             | `3`                           |
+| `PROCESSING_TIMEOUT_MS`          | `30000`                       |
+
+3 MB rather than 4.5 because the cap applies to the **response** too, and a re-encode at quality 92
+with full chroma resolution can return a file larger than the one it received. A 4 MB upload that
+succeeds can still fail on the way back.
+
+Two consequences worth accepting deliberately:
+
+- **Phone photos routinely exceed 3 MB.** A meaningful share of real uploads will be rejected. The
+  message is accurate and names the limit, but it is a genuine product compromise, not a detail.
+- **Rate limiting stops being meaningful.** The limiter holds counters in process memory, and
+  serverless instances are numerous and short-lived, so the effective limit is far higher than
+  configured. Use Vercel's WAF rate limiting as the real control and treat this one as a backstop.
+
+The route pins `maxDuration = 60`, comfortably inside Vercel's 300s default, so a wedged request
+fails fast instead of billing for five minutes.
+
+### Container (full 25 MB)
+
+For the advertised limit, run it somewhere without a body cap — Railway, Render, Fly.io, or any VPS.
+A `Dockerfile` is included and builds a standalone image:
+
+```bash
+docker build -t ai-remove-pilot .
+```
+
+```bash
+docker run -p 3000:3000 -e NEXT_PUBLIC_APP_URL=https://your-domain.example ai-remove-pilot
+```
+
+The build sets `BUILD_STANDALONE=1`, which switches on Next.js standalone output. That flag is off
+by default so platform builds keep using their own packaging.
+
+A long-running Node process is the better fit for this workload anyway: no cold-start cost on a
+native module, and the in-memory rate limiter behaves the way it was designed to.
+
+If you put a reverse proxy in front of it, raise its body limit to match — nginx defaults
+`client_max_body_size` to 1 MB, which will reject uploads before they reach the app.
+
+### Sizing, wherever you run it
+
+- **Memory.** An in-flight image occupies memory proportional to its _decoded_ size, which is much
+  larger than its file size. Size instances against `MAX_UPLOAD_SIZE_MB` and
+  `MAX_IMAGE_MEGAPIXELS` together, and lower both on small instances.
+- **Duration.** Keep `PROCESSING_TIMEOUT_MS` below the platform's function or gateway timeout, so
+  users get a clear message instead of a gateway error.
+- **Body limits.** Whatever the platform enforces, set `MAX_UPLOAD_SIZE_MB` to match. The client
+  translates a platform-level 413 into the "too large" message, but it is better to reject the file
+  before the upload starts.
 
 ## Troubleshooting
 
@@ -273,4 +317,5 @@ with the format and dimensions, not the image.
 
 **Everything returns 429 in development.** The rate limiter counts every request in the window.
 Raise `RATE_LIMIT_REQUESTS` in `.env.local`.
+
 # ai-remove-pilot
