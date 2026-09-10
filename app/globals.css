@@ -142,6 +142,41 @@
   }
 }
 
+/*
+  Panel and row entrances.
+
+  These are CSS animations rather than JS ones, and they deliberately use no
+  fill-mode. A JS animation reveals content by starting it at opacity 0 and
+  animating up, which means anything that stops the animation loop — a
+  backgrounded tab starving requestAnimationFrame, a throttled device — leaves
+  the content invisible or the transition half-finished. Here the natural style
+  is the visible one and the animation is pure decoration, so the worst case is
+  that content simply appears without a fade.
+*/
+@keyframes panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+@keyframes row-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+
+@layer utilities {
+  .animate-panel-in {
+    animation: panel-in 220ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .animate-row-in {
+    animation: row-in 180ms ease-out;
+  }
+}
+
 /* Sweep used by the indeterminate progress bar, for the server-side stage
    where no real percentage exists to report. */
 @keyframes indeterminate {

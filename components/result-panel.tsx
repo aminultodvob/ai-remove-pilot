@@ -1,6 +1,5 @@
 "use client";
 
-import { motion, useReducedMotion } from "framer-motion";
 import { ChevronDown, Download, Info, RotateCcw, ShieldCheck, Trash2 } from "lucide-react";
 import * as React from "react";
 
@@ -34,7 +33,6 @@ export function ResultPanel({
   downloadUrl: string;
   onReset: () => void;
 }) {
-  const reduceMotion = useReducedMotion();
   const [showDetails, setShowDetails] = React.useState(false);
 
   const removed = report.metadataRemoved;
@@ -43,12 +41,7 @@ export function ResultPanel({
   const grew = report.processedSize > report.originalSize * 1.02;
 
   return (
-    <motion.div
-      initial={reduceMotion ? false : { opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.25 }}
-      className="grid gap-6 lg:grid-cols-[1.25fr_1fr]"
-    >
+    <div className="animate-panel-in grid gap-6 lg:grid-cols-[1.25fr_1fr]">
       {/* Before / after ------------------------------------------------- */}
       <div className="min-w-0">
         <div className="flex items-center gap-2">
@@ -244,6 +237,6 @@ export function ResultPanel({
           </div>
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 }

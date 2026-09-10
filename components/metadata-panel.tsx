@@ -1,6 +1,5 @@
 "use client";
 
-import { motion, useReducedMotion } from "framer-motion";
 import { Check, Info, MapPin } from "lucide-react";
 import * as React from "react";
 
@@ -28,7 +27,6 @@ export function MetadataPanel({
   fileSize: number;
   className?: string;
 }) {
-  const reduceMotion = useReducedMotion();
   const privacyCategories = inspection.categories.filter((c) => c !== "color" && c !== "other");
 
   return (
@@ -61,14 +59,15 @@ export function MetadataPanel({
         ) : (
           <ul className="mt-3 space-y-1.5">
             {inspection.categories.map((category, index) => (
-              <motion.li
+              <li
                 key={category}
-                initial={reduceMotion ? false : { opacity: 0, y: 4 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.18, delay: reduceMotion ? 0 : index * 0.035 }}
+                className="animate-row-in"
+                // Staggered purely with a delay, so a skipped animation still
+                // leaves every row visible.
+                style={{ animationDelay: `${index * 35}ms` }}
               >
                 <CategoryRow category={category} />
-              </motion.li>
+              </li>
             ))}
           </ul>
         )}

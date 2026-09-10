@@ -1,6 +1,5 @@
 "use client";
 
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { AlertTriangle, RotateCcw, Sparkles, X } from "lucide-react";
 import * as React from "react";
 
@@ -382,9 +381,11 @@ export function ImageWorkspace() {
 
   return (
     <div className="w-full">
-      <AnimatePresence mode="wait" initial={false}>
-        <Panel key={view.key}>{view.node}</Panel>
-      </AnimatePresence>
+      {/* The key remounts the subtree on every phase change, which is what
+          replays the entrance animation. No exit animation: a utility should
+          swap to the next step immediately rather than make the user wait out
+          a fade. */}
+      <Panel key={view.key}>{view.node}</Panel>
     </div>
   );
 }
@@ -392,17 +393,7 @@ export function ImageWorkspace() {
 /* ------------------------------------------------------------------ */
 
 function Panel({ children }: { children: React.ReactNode }) {
-  const reduceMotion = useReducedMotion();
-  return (
-    <motion.div
-      initial={reduceMotion ? false : { opacity: 0, y: 6 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={reduceMotion ? undefined : { opacity: 0, y: -6 }}
-      transition={{ duration: 0.2 }}
-    >
-      {children}
-    </motion.div>
-  );
+  return <div className="animate-panel-in">{children}</div>;
 }
 
 function ErrorCard({
