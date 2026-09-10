@@ -301,8 +301,19 @@ If you put a reverse proxy in front of it, raise its body limit to match — ngi
 
 ## Troubleshooting
 
-**`Cannot find native binding` when running tests.** npm sometimes skips optional platform
-dependencies. Remove `node_modules` and `package-lock.json` and reinstall.
+**`Cannot find native binding` when running tests.** Vitest's bundler ships its native binary as
+an optional, platform-specific package, and npm sometimes skips it ([npm/cli#4828](https://github.com/npm/cli/issues/4828)).
+Install the one for your platform without recording it:
+
+```bash
+npm install @rolldown/binding-win32-x64-msvc --no-save
+```
+
+Substitute your platform's package (`-darwin-arm64`, `-linux-x64-gnu`, and so on). **Do not add it
+to `package.json`.** A platform-locked package in `dependencies` or `devDependencies` makes
+`npm install` fail with `EBADPLATFORM` on every other platform, including Linux build machines like
+Vercel's. The lockfile already lists every binding as optional with the right `os` constraints, which
+is what lets each platform install only the one it can use.
 
 **sharp fails to load after deploying.** The prebuilt binary is platform-specific. Install
 dependencies on the target platform, or in the same container image you deploy.

@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "private": true,
   "description": "Privacy-first image metadata cleaning utility.",
+  "engines": {
+    "node": ">=20.9.0"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -26,8 +29,6 @@
     "zod": "^4.6.1"
   },
   "devDependencies": {
-    "@eslint/eslintrc": "^3.3.7",
-    "@rolldown/binding-win32-x64-msvc": "^1.2.8",
     "@tailwindcss/postcss": "^4.3.3",
     "@types/node": "^22.20.2",
     "@types/react": "^19.3.0",
